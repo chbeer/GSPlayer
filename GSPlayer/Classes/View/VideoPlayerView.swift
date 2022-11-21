@@ -5,11 +5,20 @@
 //  Created by Gesen on 2019/4/20.
 //  Copyright © 2019 Gesen. All rights reserved.
 //
-#if !os(macOS)
-import UIKit
 import AVFoundation
+import SwiftUI
 
-open class VideoPlayerView: UIView {
+#if os(macOS)
+import AppKit
+
+public typealias GSView = NSView
+#else
+import UIKit
+
+public typealias GSView = UIView
+#endif
+
+open class VideoPlayerView: GSView {
     
     public enum State {
         
@@ -129,12 +138,11 @@ open class VideoPlayerView: UIView {
     
     // MARK: - Lifecycle
     
-    open override var contentMode: UIView.ContentMode {
+    open var videoContentMode: SwiftUI.ContentMode = .fit {
         didSet {
-            switch contentMode {
-            case .scaleAspectFill:  playerLayer.videoGravity = .resizeAspectFill
-            case .scaleAspectFit:   playerLayer.videoGravity = .resizeAspect
-            default:                playerLayer.videoGravity = .resize
+            switch videoContentMode {
+            case .fill:  playerLayer.videoGravity = .resizeAspectFill
+            case .fit:   playerLayer.videoGravity = .resizeAspect
             }
         }
     }
@@ -149,6 +157,7 @@ open class VideoPlayerView: UIView {
         configureInit()
     }
     
+#if os(iOS)
     open override func layoutSubviews() {
         super.layoutSubviews()
         guard playerLayer.superlayer == layer else { return }
@@ -158,6 +167,7 @@ open class VideoPlayerView: UIView {
         playerLayer.frame = bounds
         CATransaction.commit()
     }
+#endif
     
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -241,7 +251,7 @@ open class VideoPlayerView: UIView {
     
     /// Requests invocation of a block when specified times are traversed during normal playback.
     @discardableResult
-    @nonobjc open func addBoundaryTimeObserver(forTimes times: [CMTime], queue: DispatchQueue? = nil, using: @escaping () -> Void) -> Any? {
+    @nonobjc public func addBoundaryTimeObserver(forTimes times: [CMTime], queue: DispatchQueue? = nil, using: @escaping () -> Void) -> Any? {
         return player?.addBoundaryTimeObserver(forTimes: times.map { NSValue(time: $0) }, queue: queue, using: using)
     }
     
@@ -287,7 +297,11 @@ private extension VideoPlayerView {
             object: nil
         )
         
+#if os(macOS)
+        layer?.addSublayer(playerLayer)
+#else
         layer.addSublayer(playerLayer)
+#endif
     }
     
     func stateDidChanged(state: State, previous: State) {
@@ -417,4 +431,4 @@ extension VideoPlayerView.State: Equatable {
     }
     
 }
-#endif
+//#endif
